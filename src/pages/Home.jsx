@@ -34,46 +34,7 @@ export default function Home() {
 
   return (
     <div>
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-secondary to-secondary-soft text-white py-24 px-4 overflow-hidden relative">
-        {/* Glow effect */}
-        <div className="absolute top-[-20%] left-[-10%] w-96 h-96 bg-primary/30 rounded-full blur-[120px] pointer-events-none"></div>
-        <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-accent/20 rounded-full blur-[150px] pointer-events-none"></div>
-
-        <div className="container mx-auto text-center max-w-4xl relative z-10">
-          <h1 className="font-heading text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-[1.1]">
-            Find The Best Deals,<br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-light to-primary">Save More Every Day</span>
-          </h1>
-          <p className="text-gray-300 text-lg md:text-xl mb-12 max-w-2xl mx-auto font-medium">
-            Handpicked deals from Amazon, Flipkart & Meesho. Updated hourly so you never miss a steal.
-          </p>
-
-          <div className="relative max-w-2xl mx-auto mb-10 group">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-primary transition-colors">
-              <Search size={22} />
-            </div>
-            <input 
-              type="text" 
-              placeholder="Search for products, brands, or categories..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white text-secondary py-4 pl-12 pr-32 rounded-pill shadow-2xl focus:outline-none focus:ring-4 focus:ring-primary/20 transition-all text-lg"
-            />
-            <button className="absolute right-2 top-2 bottom-2 bg-primary hover:bg-primary-dark text-white px-8 rounded-pill font-bold transition-colors">
-              Search
-            </button>
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm font-semibold uppercase tracking-wider text-gray-300">
-            <div className="flex items-center gap-2"><span className="text-primary text-lg">●</span> 500+ Products</div>
-            <div className="flex items-center gap-2"><span className="text-accent text-lg">●</span> Top Brands</div>
-            <div className="flex items-center gap-2"><span className="text-blue-400 text-lg">●</span> Daily Updates</div>
-          </div>
-        </div>
-      </section>
-
-      {/* Main Content Area */}
+      {/* Main Content Area (Hero section removed) */}
       <div className="container mx-auto px-4 py-16" id="deals">
         
         {/* Category Filter */}
