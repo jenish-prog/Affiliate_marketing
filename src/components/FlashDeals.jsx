@@ -5,12 +5,24 @@ import { fetchProducts } from '../lib/api';
 export default function FlashDeals() {
   const [flashDeals, setFlashDeals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [timeLeft, setTimeLeft] = useState({ hrs: '00', mins: '00', secs: '00' });
+  const [targetTime, setTargetTime] = useState(null);
 
   useEffect(() => {
     const loadDeals = async () => {
       try {
         const data = await fetchProducts();
         setFlashDeals(data?.filter(p => p.section === 'flash') || []);
+        
+        const config = data?.find(p => p.section === 'system_config' && p.name === 'flash_end_time');
+        if (config && config.description) {
+          setTargetTime(new Date(config.description));
+        } else {
+          // Default to next midnight if admin hasn't set one
+          const midnight = new Date();
+          midnight.setHours(24, 0, 0, 0);
+          setTargetTime(midnight);
+        }
       } catch (error) {
         console.error('Error fetching flash deals:', error);
       } finally {
@@ -19,6 +31,34 @@ export default function FlashDeals() {
     };
     loadDeals();
   }, []);
+
+  useEffect(() => {
+    if (!targetTime) return;
+
+    const calculateTime = () => {
+      const now = new Date();
+      const difference = Math.floor((targetTime - now) / 1000);
+
+      if (difference > 0) {
+        const hours = Math.floor(difference / 3600);
+        const minutes = Math.floor((difference % 3600) / 60);
+        const seconds = difference % 60;
+        
+        setTimeLeft({
+          hrs: hours.toString().padStart(2, '0'),
+          mins: minutes.toString().padStart(2, '0'),
+          secs: seconds.toString().padStart(2, '0')
+        });
+      } else {
+        setTimeLeft({ hrs: '00', mins: '00', secs: '00' });
+        // Optional: you could choose to hide deals automatically when it hits zero
+      }
+    };
+
+    calculateTime(); // Initial call
+    const interval = setInterval(calculateTime, 1000);
+    return () => clearInterval(interval);
+  }, [targetTime]);
 
   if (loading) return <div className="mt-12 flex justify-center py-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
   if (flashDeals.length === 0) return null;
@@ -46,17 +86,17 @@ export default function FlashDeals() {
           <span className="text-sm font-semibold text-gray-600 hidden md:inline">Ends in</span>
           <div className="flex items-center gap-2">
             <div className="flex flex-col items-center">
-              <div className="bg-primary text-white rounded-[4px] px-2 py-1 text-sm font-bold shadow-sm">04</div>
+              <div className="bg-primary text-white rounded-[4px] px-2 py-1 text-sm font-bold shadow-sm">{timeLeft.hrs}</div>
               <span className="text-[8px] text-gray-500 mt-1 uppercase font-bold">Hrs</span>
             </div>
             <span className="text-gray-400 font-bold mb-3">:</span>
             <div className="flex flex-col items-center">
-              <div className="bg-primary text-white rounded-[4px] px-2 py-1 text-sm font-bold shadow-sm">29</div>
+              <div className="bg-primary text-white rounded-[4px] px-2 py-1 text-sm font-bold shadow-sm">{timeLeft.mins}</div>
               <span className="text-[8px] text-gray-500 mt-1 uppercase font-bold">Mins</span>
             </div>
             <span className="text-gray-400 font-bold mb-3">:</span>
             <div className="flex flex-col items-center">
-              <div className="bg-brand-red text-white rounded-[4px] px-2 py-1 text-sm font-bold shadow-sm">59</div>
+              <div className="bg-brand-red text-white rounded-[4px] px-2 py-1 text-sm font-bold shadow-sm">{timeLeft.secs}</div>
               <span className="text-[8px] text-gray-500 mt-1 uppercase font-bold">Secs</span>
             </div>
           </div>

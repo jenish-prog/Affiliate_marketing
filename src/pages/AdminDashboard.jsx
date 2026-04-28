@@ -11,6 +11,8 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState([]);
   const [flashDeals, setFlashDeals] = useState([]);
   const [trendingOffers, setTrendingOffers] = useState([]);
+  const [flashEndTime, setFlashEndTime] = useState('');
+  const [timerHours, setTimerHours] = useState('');
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
@@ -41,10 +43,50 @@ export default function AdminDashboard() {
       setProducts(data?.filter(p => !p.section || p.section === 'products') || []);
       setFlashDeals(data?.filter(p => p.section === 'flash') || []);
       setTrendingOffers(data?.filter(p => p.section === 'trending') || []);
+      
+      const config = data?.find(p => p.section === 'system_config' && p.name === 'flash_end_time');
+      if (config && config.description) {
+        setFlashEndTime(config.description); // ISO string
+      }
     } catch (err) {
       toast.error('Failed to load data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveTimer = async () => {
+    try {
+      const hours = parseInt(timerHours);
+      if (!hours || isNaN(hours) || hours <= 0) {
+        toast.error('Please enter a valid number of hours');
+        return;
+      }
+      
+      const newEndTime = new Date(Date.now() + hours * 3600 * 1000).toISOString();
+      const data = await fetchProducts();
+      const existingConfig = data?.find(p => p.section === 'system_config' && p.name === 'flash_end_time');
+      
+      if (existingConfig) {
+        await updateProduct(existingConfig.id, { ...existingConfig, description: newEndTime });
+      } else {
+        await addProduct({ 
+          section: 'system_config', 
+          name: 'flash_end_time', 
+          description: newEndTime,
+          platform: 'System',
+          category: 'System',
+          image_url: 'system',
+          affiliate_url: 'system',
+          price: 0
+        });
+      }
+      
+      setFlashEndTime(newEndTime);
+      setTimerHours('');
+      toast.success(`Flash deal timer started for ${hours} hours!`);
+    } catch (err) {
+      toast.error('Failed to update timer');
     }
   };
 
@@ -198,12 +240,40 @@ export default function AdminDashboard() {
                 {activeTab === 'flash' ? 'Manage limited-time flash deals' : activeTab === 'trending' ? 'Manage trending offers' : 'Manage your affiliate products'}
               </p>
             </div>
-            <button 
-              onClick={() => openModal()}
-              className="btn-primary px-8 py-3.5 shadow-[0_8px_20px_rgba(255,107,53,0.3)] hover:-translate-y-1 transform transition-all font-bold tracking-wider flex items-center gap-2"
-            >
-              <Plus size={20} /> Add {activeTab === 'flash' ? 'Flash Deal' : activeTab === 'trending' ? 'Offer' : 'Product'}
-            </button>
+            
+            <div className="flex items-center gap-4">
+              {activeTab === 'flash' && (
+                <div className="flex flex-col items-end gap-1">
+                  <div className="flex items-center bg-white border border-border/50 rounded-xl p-2 pr-3 shadow-sm mr-2">
+                    <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide mr-3 ml-1">
+                      Set Duration (Hrs)
+                    </div>
+                    <input 
+                      type="number" 
+                      min="1"
+                      placeholder="e.g. 10"
+                      value={timerHours}
+                      onChange={(e) => setTimerHours(e.target.value)}
+                      className="text-sm font-bold text-secondary bg-transparent border-none outline-none mr-3 w-16 text-center"
+                    />
+                    <button onClick={handleSaveTimer} className="bg-primary hover:bg-primary-dark text-white rounded-lg px-4 py-1.5 text-xs font-bold transition-colors shadow-sm">
+                      Start
+                    </button>
+                  </div>
+                  {flashEndTime && (
+                    <span className="text-xs text-gray-500 font-medium mr-4">
+                      Current timer ends: {new Date(flashEndTime).toLocaleString()}
+                    </span>
+                  )}
+                </div>
+              )}
+              <button 
+                onClick={() => openModal()}
+                className="btn-primary px-8 py-3.5 shadow-[0_8px_20px_rgba(255,107,53,0.3)] hover:-translate-y-1 transform transition-all font-bold tracking-wider flex items-center gap-2"
+              >
+                <Plus size={20} /> Add {activeTab === 'flash' ? 'Flash Deal' : activeTab === 'trending' ? 'Offer' : 'Product'}
+              </button>
+            </div>
           </div>
 
           {/* Table */}
