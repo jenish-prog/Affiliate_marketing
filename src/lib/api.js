@@ -1,15 +1,30 @@
 import { supabase, supabaseAdmin } from './supabase'
 
 export const fetchProducts = async () => {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .order('created_at', { ascending: false })
-  if (error) throw error
-  return data?.map(p => ({
-    ...p,
-    image_url: p.image_url ? (p.image_url.includes('?t=') ? p.image_url : `${p.image_url}?t=${Date.now()}`) : null
-  })) || []
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data?.map(p => ({
+      ...p,
+      section: p.section || 'products', // Default to 'products' if not set
+      image_url: p.image_url ? (p.image_url.includes('?t=') ? p.image_url : `${p.image_url}?t=${Date.now()}`) : null
+    })) || []
+  } catch (err) {
+    console.error('Error fetching products:', err)
+    // Fallback: return empty array if section column doesn't exist yet
+    const { data } = await supabase
+      .from('products')
+      .select('id, name, category, price, original_price, platform, badge, affiliate_url, description, image_url, created_at')
+      .order('created_at', { ascending: false })
+    return data?.map(p => ({
+      ...p,
+      section: 'products',
+      image_url: p.image_url ? (p.image_url.includes('?t=') ? p.image_url : `${p.image_url}?t=${Date.now()}`) : null
+    })) || []
+  }
 }
 
 export const fetchProductById = async (id) => {

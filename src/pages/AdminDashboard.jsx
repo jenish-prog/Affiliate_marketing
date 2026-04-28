@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Pencil, Trash2, Plus, LogOut, Package, Image as ImageIcon, Link as LinkIcon, DollarSign, Tag, TrendingUp, X } from 'lucide-react';
+import { Pencil, Trash2, Plus, LogOut, Package, Image as ImageIcon, Link as LinkIcon, DollarSign, Tag, TrendingUp, X, Zap, Flame } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { fetchProducts, addProduct, updateProduct, deleteProduct, uploadImage } from '../lib/api';
 
 export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState('products'); // products, flash, trending
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
   const [products, setProducts] = useState([]);
+  const [flashDeals, setFlashDeals] = useState([]);
+  const [trendingOffers, setTrendingOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
@@ -19,7 +22,8 @@ export default function AdminDashboard() {
     badge: '',
     affiliate_url: '',
     description: '',
-    image_url: ''
+    image_url: '',
+    section: 'products' // products, flash, trending
   });
   const navigate = useNavigate();
 
@@ -28,15 +32,17 @@ export default function AdminDashboard() {
   const badges = ['', 'Hot Deal', 'New', 'Limited', 'Sale'];
 
   useEffect(() => {
-    loadProducts();
+    loadAllData();
   }, []);
 
-  const loadProducts = async () => {
+  const loadAllData = async () => {
     try {
       const data = await fetchProducts();
-      setProducts(data || []);
+      setProducts(data?.filter(p => !p.section || p.section === 'products') || []);
+      setFlashDeals(data?.filter(p => p.section === 'flash') || []);
+      setTrendingOffers(data?.filter(p => p.section === 'trending') || []);
     } catch (err) {
-      toast.error('Failed to load products');
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -65,40 +71,40 @@ export default function AdminDashboard() {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      if (editingProduct) {
-        await updateProduct(editingProduct.id, formData);
-        toast.success('Product updated!', { icon: '✅' });
+      if (editingItem) {
+        await updateProduct(editingItem.id, formData);
+        toast.success('Item updated!', { icon: '✅' });
       } else {
         await addProduct(formData);
-        toast.success('Product added!', { icon: '✅' });
+        toast.success('Item added!', { icon: '✅' });
       }
       setIsModalOpen(false);
-      loadProducts();
+      loadAllData();
       resetForm();
     } catch (err) {
-      toast.error('Failed to save product');
+      toast.error('Failed to save item');
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this product?')) return;
+    if (!confirm('Delete this item?')) return;
     try {
       await deleteProduct(id);
-      toast.success('Product deleted', { icon: '🗑️' });
-      loadProducts();
+      toast.success('Item deleted', { icon: '🗑️' });
+      loadAllData();
     } catch (err) {
-      toast.error('Failed to delete product');
+      toast.error('Failed to delete item');
     }
   };
 
-  const handleEdit = (product) => {
-    setEditingProduct(product);
-    setFormData(product);
+  const handleEdit = (item) => {
+    setEditingItem(item);
+    setFormData(item);
     setIsModalOpen(true);
   };
 
   const resetForm = () => {
-    setEditingProduct(null);
+    setEditingItem(null);
     setFormData({
       name: '',
       category: 'Electronics',
@@ -108,12 +114,14 @@ export default function AdminDashboard() {
       badge: '',
       affiliate_url: '',
       description: '',
-      image_url: ''
+      image_url: '',
+      section: activeTab === 'flash' ? 'flash' : activeTab === 'trending' ? 'trending' : 'products'
     });
   };
 
-  const openModal = () => {
+  const openModal = (section = activeTab) => {
     resetForm();
+    setFormData(prev => ({ ...prev, section: section === 'flash' ? 'flash' : section === 'trending' ? 'trending' : 'products' }));
     setIsModalOpen(true);
   };
 
@@ -128,15 +136,36 @@ export default function AdminDashboard() {
           <p className="text-gray-400 text-sm mt-2 font-medium">Admin Portal</p>
         </div>
         <nav className="flex-1 p-6 space-y-2">
-          <button className="w-full flex items-center gap-4 bg-primary/10 text-primary px-6 py-4 rounded-xl transition-colors font-bold tracking-wide">
+          <button 
+            onClick={() => setActiveTab('products')}
+            className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl transition-colors font-bold tracking-wide ${
+              activeTab === 'products' ? 'bg-primary/10 text-primary' : 'hover:bg-white/5 text-gray-300 hover:text-white'
+            }`}
+          >
             <Package size={22} /> Products
           </button>
           <button 
-              onClick={openModal}
-              className="w-full flex items-center gap-4 hover:bg-white/5 px-6 py-4 rounded-xl transition-colors text-gray-300 hover:text-white font-semibold"
-            >
-              <Plus size={22} /> Add New
-            </button>
+            onClick={() => setActiveTab('flash')}
+            className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl transition-colors font-bold tracking-wide ${
+              activeTab === 'flash' ? 'bg-primary/10 text-primary' : 'hover:bg-white/5 text-gray-300 hover:text-white'
+            }`}
+          >
+            <Zap size={22} /> Flash Deals
+          </button>
+          <button 
+            onClick={() => setActiveTab('trending')}
+            className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl transition-colors font-bold tracking-wide ${
+              activeTab === 'trending' ? 'bg-primary/10 text-primary' : 'hover:bg-white/5 text-gray-300 hover:text-white'
+            }`}
+          >
+            <Flame size={22} /> Trending Offers
+          </button>
+          <button 
+            onClick={() => openModal()}
+            className="w-full flex items-center gap-4 hover:bg-white/5 px-6 py-4 rounded-xl transition-colors text-gray-300 hover:text-white font-semibold mt-4"
+          >
+            <Plus size={22} /> Add New
+          </button>
         </nav>
         <div className="p-6 border-t border-white/5">
           <button 
@@ -153,14 +182,18 @@ export default function AdminDashboard() {
         <div className="p-8 md:p-12 max-w-7xl mx-auto">
           <div className="flex justify-between items-end mb-10">
             <div>
-              <h1 className="font-heading text-4xl font-extrabold text-secondary mb-2 tracking-tight">Product Manager</h1>
-              <p className="text-gray-500 font-medium">Manage your affiliate products and deals</p>
+              <h1 className="font-heading text-4xl font-extrabold text-secondary mb-2 tracking-tight">
+                {activeTab === 'flash' ? '⚡ Flash Deals Manager' : activeTab === 'trending' ? '🔥 Trending Offers Manager' : '📦 Product Manager'}
+              </h1>
+              <p className="text-gray-500 font-medium">
+                {activeTab === 'flash' ? 'Manage limited-time flash deals' : activeTab === 'trending' ? 'Manage trending offers' : 'Manage your affiliate products'}
+              </p>
             </div>
             <button 
-              onClick={openModal}
+              onClick={() => openModal()}
               className="btn-primary px-8 py-3.5 shadow-[0_8px_20px_rgba(255,107,53,0.3)] hover:-translate-y-1 transform transition-all font-bold tracking-wider flex items-center gap-2"
             >
-              <Plus size={20} /> Add Product
+              <Plus size={20} /> Add {activeTab === 'flash' ? 'Flash Deal' : activeTab === 'trending' ? 'Offer' : 'Product'}
             </button>
           </div>
 
@@ -174,48 +207,136 @@ export default function AdminDashboard() {
                     <th className="px-8 py-5 text-gray-400 font-bold uppercase tracking-wider text-sm">Item</th>
                     <th className="px-8 py-5 text-gray-400 font-bold uppercase tracking-wider text-sm">Platform</th>
                     <th className="px-8 py-5 text-gray-400 font-bold uppercase tracking-wider text-sm">Price</th>
+                    <th className="px-8 py-5 text-gray-400 font-bold uppercase tracking-wider text-sm">Link</th>
                     <th className="px-8 py-5 text-gray-400 font-bold uppercase tracking-wider text-sm text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
                   {loading ? (
-                    <tr><td colSpan="5" className="px-8 py-6 text-center text-gray-500">Loading...</td></tr>
-                  ) : products.length === 0 ? (
-                    <tr><td colSpan="5" className="px-8 py-6 text-center text-gray-500">No products found</td></tr>
+                    <tr><td colSpan="6" className="px-8 py-6 text-center text-gray-500">Loading...</td></tr>
                   ) : (
-                    products.map((p) => (
-                      <tr key={p.id} className="hover:bg-primary-light/30 transition-colors group">
-                        <td className="px-8 py-6 text-gray-400 font-medium">{p.id}</td>
-                        <td className="px-8 py-6 flex items-center gap-5">
-                          <img src={p.image_url || 'https://placehold.co/56x56/FF6B35/white?text=N/A'} alt={p.name} className="w-14 h-14 rounded-xl object-cover bg-gray-100 border border-border/50 shadow-sm" />
-                          <div>
-                            <div className="font-bold text-secondary line-clamp-1 max-w-[250px] mb-1">{p.name}</div>
-                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-100 px-2 py-1 rounded-md">{p.category}</span>
-                          </div>
-                        </td>
-                        <td className="px-8 py-6">
-                          <span className={`inline-flex items-center justify-center font-bold px-3 py-1 rounded-lg text-xs uppercase tracking-wider ${
-                              p.platform === 'Amazon' ? 'bg-[#FFF3E0] text-[#E65100]' : 
-                              p.platform === 'Flipkart' ? 'bg-[#E3F2FD] text-[#1565C0]' : 
-                              'bg-[#FCE4EC] text-[#AD1457]'
-                            }`}>
-                            {p.platform}
-                          </span>
-                        </td>
-                        <td className="px-8 py-6">
-                          <div className="font-bold text-secondary text-lg">{p.price}</div>
-                          {p.original_price && <div className="text-gray-400 line-through text-sm font-medium">{p.original_price}</div>}
-                        </td>
-                        <td className="px-8 py-6 text-right whitespace-nowrap">
-                          <button onClick={() => handleEdit(p)} className="p-3 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl transition-colors mr-3 shadow-sm" aria-label="Edit">
-                            <Pencil size={18} />
-                          </button>
-                          <button onClick={() => handleDelete(p.id)} className="p-3 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl transition-colors shadow-sm" aria-label="Delete">
-                            <Trash2 size={18} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                    <>
+                      {activeTab === 'products' && (products.length === 0 ? (
+                        <tr><td colSpan="6" className="px-8 py-6 text-center text-gray-500">No products found</td></tr>
+                      ) : (
+                        products.map((p, idx) => (
+                          <tr key={p.id} className="hover:bg-primary-light/30 transition-colors group">
+                            <td className="px-8 py-6 text-gray-400 font-medium">{idx + 1}</td>
+                            <td className="px-8 py-6 flex items-center gap-5">
+                              <img src={p.image_url || 'https://placehold.co/56x56/FF6B35/white?text=N/A'} alt={p.name} className="w-14 h-14 rounded-xl object-cover bg-gray-100 border border-border/50 shadow-sm" />
+                              <div>
+                                <div className="font-bold text-secondary line-clamp-1 max-w-[250px] mb-1">{p.name}</div>
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-100 px-2 py-1 rounded-md">{p.category}</span>
+                              </div>
+                            </td>
+                            <td className="px-8 py-6">
+                              <span className={`inline-flex items-center justify-center font-bold px-3 py-1 rounded-lg text-xs uppercase tracking-wider ${
+                                  p.platform === 'Amazon' ? 'bg-[#FF9900]/10 text-[#FF9900]' : 
+                                  p.platform === 'Flipkart' ? 'bg-[#2874F0]/10 text-[#2874F0]' : 
+                                  'bg-[#FF3F6C]/10 text-[#FF3F6C]'
+                                }`}>
+                                {p.platform}
+                              </span>
+                            </td>
+                            <td className="px-8 py-6">
+                              <div className="font-bold text-secondary text-lg">₹{p.price}</div>
+                              {p.original_price && <div className="text-gray-400 line-through text-sm font-medium">₹{p.original_price}</div>}
+                            </td>
+                            <td className="px-8 py-6">
+                              <a href={p.affiliate_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold truncate max-w-[200px] inline-block">View Link →</a>
+                            </td>
+                            <td className="px-8 py-6 text-right whitespace-nowrap">
+                              <button onClick={() => handleEdit(p)} className="p-3 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl transition-colors mr-3 shadow-sm" aria-label="Edit">
+                                <Pencil size={18} />
+                              </button>
+                              <button onClick={() => handleDelete(p.id)} className="p-3 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl transition-colors shadow-sm" aria-label="Delete">
+                                <Trash2 size={18} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ))}
+                      {activeTab === 'flash' && (flashDeals.length === 0 ? (
+                        <tr><td colSpan="6" className="px-8 py-6 text-center text-gray-500">No flash deals found</td></tr>
+                      ) : (
+                        flashDeals.map((p, idx) => (
+                          <tr key={p.id} className="hover:bg-primary-light/30 transition-colors group">
+                            <td className="px-8 py-6 text-gray-400 font-medium">{idx + 1}</td>
+                            <td className="px-8 py-6 flex items-center gap-5">
+                              <img src={p.image_url || 'https://placehold.co/56x56/FF6B35/white?text=N/A'} alt={p.name} className="w-14 h-14 rounded-xl object-cover bg-gray-100 border border-border/50 shadow-sm" />
+                              <div>
+                                <div className="font-bold text-secondary line-clamp-1 max-w-[250px] mb-1">{p.name}</div>
+                                <span className="text-xs font-bold text-red-600 uppercase tracking-wider bg-red-100 px-2 py-1 rounded-md">⚡ Flash Deal</span>
+                              </div>
+                            </td>
+                            <td className="px-8 py-6">
+                              <span className={`inline-flex items-center justify-center font-bold px-3 py-1 rounded-lg text-xs uppercase tracking-wider ${
+                                  p.platform === 'Amazon' ? 'bg-[#FF9900]/10 text-[#FF9900]' : 
+                                  p.platform === 'Flipkart' ? 'bg-[#2874F0]/10 text-[#2874F0]' : 
+                                  'bg-[#FF3F6C]/10 text-[#FF3F6C]'
+                                }`}>
+                                {p.platform}
+                              </span>
+                            </td>
+                            <td className="px-8 py-6">
+                              <div className="font-bold text-secondary text-lg">₹{p.price}</div>
+                              {p.original_price && <div className="text-gray-400 line-through text-sm font-medium">₹{p.original_price}</div>}
+                            </td>
+                            <td className="px-8 py-6">
+                              <a href={p.affiliate_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold truncate max-w-[200px] inline-block">View Link →</a>
+                            </td>
+                            <td className="px-8 py-6 text-right whitespace-nowrap">
+                              <button onClick={() => handleEdit(p)} className="p-3 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl transition-colors mr-3 shadow-sm" aria-label="Edit">
+                                <Pencil size={18} />
+                              </button>
+                              <button onClick={() => handleDelete(p.id)} className="p-3 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl transition-colors shadow-sm" aria-label="Delete">
+                                <Trash2 size={18} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ))}
+                      {activeTab === 'trending' && (trendingOffers.length === 0 ? (
+                        <tr><td colSpan="6" className="px-8 py-6 text-center text-gray-500">No trending offers found</td></tr>
+                      ) : (
+                        trendingOffers.map((p, idx) => (
+                          <tr key={p.id} className="hover:bg-primary-light/30 transition-colors group">
+                            <td className="px-8 py-6 text-gray-400 font-medium">{idx + 1}</td>
+                            <td className="px-8 py-6 flex items-center gap-5">
+                              <img src={p.image_url || 'https://placehold.co/56x56/FF6B35/white?text=N/A'} alt={p.name} className="w-14 h-14 rounded-xl object-cover bg-gray-100 border border-border/50 shadow-sm" />
+                              <div>
+                                <div className="font-bold text-secondary line-clamp-1 max-w-[250px] mb-1">{p.name}</div>
+                                <span className="text-xs font-bold text-orange-600 uppercase tracking-wider bg-orange-100 px-2 py-1 rounded-md">🔥 Trending</span>
+                              </div>
+                            </td>
+                            <td className="px-8 py-6">
+                              <span className={`inline-flex items-center justify-center font-bold px-3 py-1 rounded-lg text-xs uppercase tracking-wider ${
+                                  p.platform === 'Amazon' ? 'bg-[#FF9900]/10 text-[#FF9900]' : 
+                                  p.platform === 'Flipkart' ? 'bg-[#2874F0]/10 text-[#2874F0]' : 
+                                  'bg-[#FF3F6C]/10 text-[#FF3F6C]'
+                                }`}>
+                                {p.platform}
+                              </span>
+                            </td>
+                            <td className="px-8 py-6">
+                              <div className="font-bold text-secondary text-lg">₹{p.price}</div>
+                              {p.original_price && <div className="text-gray-400 line-through text-sm font-medium">₹{p.original_price}</div>}
+                            </td>
+                            <td className="px-8 py-6">
+                              <a href={p.affiliate_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold truncate max-w-[200px] inline-block">View Link →</a>
+                            </td>
+                            <td className="px-8 py-6 text-right whitespace-nowrap">
+                              <button onClick={() => handleEdit(p)} className="p-3 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl transition-colors mr-3 shadow-sm" aria-label="Edit">
+                                <Pencil size={18} />
+                              </button>
+                              <button onClick={() => handleDelete(p.id)} className="p-3 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl transition-colors shadow-sm" aria-label="Delete">
+                                <Trash2 size={18} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ))}
+                    </>
                   )}
                 </tbody>
               </table>
@@ -231,7 +352,7 @@ export default function AdminDashboard() {
               
               <div className="px-10 py-8 border-b border-border flex justify-between items-center bg-gray-50/50">
                 <h2 className="font-heading text-2xl font-extrabold text-secondary tracking-tight">
-                  {editingProduct ? 'Edit Product' : 'Add New Product'}
+                  {editingItem ? `Edit ${formData.section === 'flash' ? 'Flash Deal' : formData.section === 'trending' ? 'Trending Offer' : 'Product'}` : `Add New ${formData.section === 'flash' ? 'Flash Deal' : formData.section === 'trending' ? 'Trending Offer' : 'Product'}`}
                 </h2>
                 <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500">
                   <X size={24} />
@@ -258,6 +379,17 @@ export default function AdminDashboard() {
 
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide flex items-center gap-2">
+                        <Tag size={16} className="text-primary"/> Section
+                      </label>
+                      <select value={formData.section} onChange={(e) => setFormData({...formData, section: e.target.value})} className="w-full px-5 py-4 rounded-xl border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium text-secondary appearance-none bg-white">
+                        <option value="products">📦 Regular Products</option>
+                        <option value="flash">⚡ Flash Deals</option>
+                        <option value="trending">🔥 Trending Offers</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide flex items-center gap-2">
                         <ImageIcon size={16} className="text-primary"/> Image Thumbnail
                       </label>
                       <input type="file" onChange={handleImageUpload} accept="image/*" disabled={uploading} className="w-full px-5 py-4 rounded-xl border-2 border-border focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium text-secondary" />
@@ -272,11 +404,11 @@ export default function AdminDashboard() {
                           <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide flex items-center gap-1">
                             <DollarSign size={16} className="text-accent"/> Price
                           </label>
-                          <input type="text" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} placeholder="₹999" className="w-full px-5 py-4 rounded-xl border-2 border-border focus:border-accent focus:ring-4 focus:ring-accent/10 transition-all font-medium text-secondary" />
+                          <input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} placeholder="999" className="w-full px-5 py-4 rounded-xl border-2 border-border focus:border-accent focus:ring-4 focus:ring-accent/10 transition-all font-medium text-secondary" />
                        </div>
                        <div>
                           <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide text-gray-400">Original</label>
-                          <input type="text" value={formData.original_price} onChange={(e) => setFormData({...formData, original_price: e.target.value})} placeholder="₹1999" className="w-full px-5 py-4 rounded-xl border-2 border-border focus:border-border focus:ring-4 focus:ring-gray-100 transition-all font-medium text-gray-400 line-through decoration-gray-300" />
+                          <input type="number" value={formData.original_price} onChange={(e) => setFormData({...formData, original_price: e.target.value})} placeholder="1999" className="w-full px-5 py-4 rounded-xl border-2 border-border focus:border-border focus:ring-4 focus:ring-gray-100 transition-all font-medium text-gray-400" />
                        </div>
                     </div>
 
@@ -314,7 +446,7 @@ export default function AdminDashboard() {
                   Cancel
                 </button>
                 <button form="productForm" type="submit" className="btn-primary px-10 py-3.5 font-bold tracking-wider shadow-[0_8px_20px_rgba(255,107,53,0.3)] hover:-translate-y-1 transform transition-all">
-                  Save Product
+                  Save Item
                 </button>
               </div>
 
