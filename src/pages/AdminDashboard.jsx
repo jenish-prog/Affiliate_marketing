@@ -70,6 +70,15 @@ export default function AdminDashboard() {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (!formData.image_url) {
+      toast.error('Please upload an image thumbnail!');
+      return;
+    }
+    if (!formData.price) {
+      toast.error('Please enter a price!');
+      return;
+    }
+    
     try {
       if (editingItem) {
         await updateProduct(editingItem.id, formData);
@@ -404,7 +413,7 @@ export default function AdminDashboard() {
                           <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide flex items-center gap-1">
                             <DollarSign size={16} className="text-accent"/> Price
                           </label>
-                          <input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} placeholder="999" className="w-full px-5 py-4 rounded-xl border-2 border-border focus:border-accent focus:ring-4 focus:ring-accent/10 transition-all font-medium text-secondary" />
+                          <input type="number" required value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} placeholder="999" className="w-full px-5 py-4 rounded-xl border-2 border-border focus:border-accent focus:ring-4 focus:ring-accent/10 transition-all font-medium text-secondary" />
                        </div>
                        <div>
                           <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide text-gray-400">Original</label>
